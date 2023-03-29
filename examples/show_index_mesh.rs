@@ -98,6 +98,7 @@ fn setup(
 
     let mut mesh = Mesh::new(PrimitiveTopology::LineList);
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, vertices);
+
     commands.spawn(MaterialMeshBundle {
         mesh: meshes.add(mesh),
         material: line_materials.add(LineMaterial {
@@ -137,11 +138,6 @@ fn setup(
             Vec3::new(0., 0., 0.),
             Vec3::Y,
         ));
-
-    // commands.spawn(Camera3dBundle {
-    //     transform: Transform::from_xyz(0.0, 20., 20.0).looking_at(Vec3::new(0., 0., 0.), Vec3::Y),
-    //     ..default()
-    // });
 }
 
 fn build_mesh_from_index_mesh(mesh: &IndexMesh) -> Mesh {
