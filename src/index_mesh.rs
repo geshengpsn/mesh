@@ -10,6 +10,9 @@ use crate::{
     AABB,
 };
 
+#[cfg(test)]
+mod index_mesh_tests;
+
 #[derive(Clone, Copy)]
 pub struct IndexTriangle(pub usize, pub usize, pub usize);
 
@@ -98,6 +101,43 @@ impl IndexMesh {
         Ok(())
     }
 
+    pub fn from_obj<F: std::io::Read>(f: &mut F) -> anyhow::Result<Self> {
+        let data = obj::ObjData::load_buf(f)?;
+        let mut triangles = vec![];
+        for obj in data.objects {
+            for g in obj.groups {
+                for p in g.polys {
+                    let mut iter = p.0.iter();
+                    triangles.push(IndexTriangle(
+                        iter.next().unwrap().0,
+                        iter.next().unwrap().0,
+                        iter.next().unwrap().0,
+                    ));
+                }
+            }
+        }
+
+        Ok(IndexMesh {
+            vertices: data
+                .position
+                .into_iter()
+                .map(|p| Vec3::from_array(p))
+                .collect::<Vec<_>>(),
+            triangles,
+        })
+    }
+
+    pub fn to_obj<F: std::io::Write>(&self, f: &mut F) -> anyhow::Result<()> {
+        for v in self.vertices.iter() {
+            writeln!(f, "v {} {} {}", v.x, v.y, v.z)?;
+        }
+
+        for t in self.triangles.iter() {
+            writeln!(f, "f {} {} {}", t.0 + 1, t.1 + 1, t.2 + 1)?;
+        }
+        Ok(())
+    }
+
     pub fn build_aabb_bvh<'a>(&'a self, option: BuildBvhOption) -> BVH<3, AABB<3>, &IndexTriangle>
     where
         (&'a IndexTriangle, [Vec3; 3]): Bounded<3, AABB<3>>,
@@ -173,67 +213,5 @@ pub struct RenderableMesh {
 impl<'a> From<(&'a IndexTriangle, [Vec3; 3])> for &'a IndexTriangle {
     fn from(value: (&'a IndexTriangle, [Vec3; 3])) -> Self {
         value.0
-    }
-}
-
-#[cfg(test)]
-mod index_mesh_tests {
-    use std::fs::File;
-
-    use glam::Vec3;
-
-    use super::IndexMesh;
-
-    #[test]
-    fn test_from_stl() {
-        let mut reader = ::std::io::Cursor::new(
-            b"solid foobar
-                   facet normal 0.1 0.2 0.3
-                       outer loop
-                           vertex 1 2 3
-                           vertex 4 5 6e-15
-                           vertex 7 8 9.87654321
-                       endloop
-                   endfacet
-                   endsolid foobar"
-                .to_vec(),
-        );
-        let res = IndexMesh::from_stl(&mut reader);
-        assert!(res.is_ok());
-        let mesh = res.unwrap();
-        assert_eq!(mesh.vertices.len(), 3);
-        assert_eq!(mesh.triangles.len(), 1);
-        assert_eq!(mesh.vertices[mesh.triangles[0].0], Vec3::new(1.0, 2.0, 3.0));
-        assert_eq!(
-            mesh.vertices[mesh.triangles[0].1],
-            Vec3::new(4.0, 5.0, 6e-15)
-        );
-        assert_eq!(
-            mesh.vertices[mesh.triangles[0].2],
-            Vec3::new(7.0, 8.0, 9.87654321)
-        );
-    }
-
-    #[test]
-    fn test_to_stl() {
-        let mut writer = ::std::io::Cursor::new(Vec::new());
-        let mut mesh = IndexMesh::new();
-        mesh.vertices.push(Vec3::new(1.0, 2.0, 3.0));
-        mesh.vertices.push(Vec3::new(4.0, 5.0, 6e-15));
-        mesh.vertices.push(Vec3::new(7.0, 8.0, 9.87654321));
-        mesh.triangles.push(super::IndexTriangle(0, 1, 2));
-        let res = mesh.to_stl(&mut writer);
-        assert!(res.is_ok());
-    }
-
-    #[test]
-    fn test_build_bvh() {
-        let mesh = IndexMesh::from_stl(&mut File::open("assets/bunny.stl").unwrap()).unwrap();
-        let start = std::time::Instant::now();
-        let _bvh = mesh.build_aabb_bvh(Default::default());
-        let end = std::time::Instant::now();
-        println!("build bvh: {:?}", end - start);
-        // let res = bvh.intersect(g, &mesh);
-        // println!("{:?}", bvh);
     }
 }

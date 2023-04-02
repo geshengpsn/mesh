@@ -33,6 +33,11 @@ fn from_stl() -> IndexMesh {
     IndexMesh::from_stl(&mut f).unwrap()
 }
 
+fn from_obj() -> IndexMesh {
+    let mut f = std::fs::File::open("assets/bunny.obj").unwrap();
+    IndexMesh::from_obj(&mut f).unwrap()
+}
+
 #[derive(Default, AsBindGroup, TypeUuid, Debug, Clone)]
 #[uuid = "050ce6ac-080a-4d8c-b6b5-b5bab7560d8f"]
 struct LineMaterial {
@@ -63,7 +68,8 @@ fn setup(
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut line_materials: ResMut<Assets<LineMaterial>>,
 ) {
-    let mesh = from_stl();
+    // let mesh = from_stl();
+    let mesh = from_obj();
     commands.spawn(PbrBundle {
         mesh: meshes.add(build_mesh_from_index_mesh(&mesh)),
         material: materials.add(StandardMaterial {
@@ -76,7 +82,7 @@ fn setup(
     let bvh = mesh.build_aabb_bvh(Default::default());
     let mut vertices: Vec<Vec3> = vec![];
     for (n, _) in bvh.iter_rand(0) {
-        if n.depth == 10 {
+        if n.depth >= 1 {
             let aabb: mesh::AABB<3> = n.bv;
             let a = Vec3::new(aabb.min[0], aabb.min[1], aabb.min[2]);
             let b = Vec3::new(aabb.max[0], aabb.min[1], aabb.min[2]);

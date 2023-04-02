@@ -33,8 +33,8 @@ all mesh types support bvh tree, which makes fast query possible
 - sphere
 - torus
 
-## road map
 
+## features road map
 - [x] vertex indices mesh 
     - [x] stl io
     - [ ] obj io
@@ -57,4 +57,9 @@ all mesh types support bvh tree, which makes fast query possible
     - [ ] triangle intersect test
     - [ ] winged-egde data structure
 
-- [ ] friendly api
+
+
+## develop todos
+- [ ] unify all mesh types to one
+    ??? user don't care what types of mesh are, dont let user read docs
+
