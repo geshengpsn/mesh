@@ -1,39 +1,54 @@
 use glam::{mat2, Vec2, Vec3};
 
-use crate::aabb::AABB;
+use crate::bv::{BoundingVolume, AABB};
 
-pub(crate) trait Primitive<const D: usize>: Bounded<D> {}
+#[cfg(test)]
+mod tests;
 
-pub trait Bounded<const D: usize> {
-    fn aabb(&self) -> AABB<D>;
+pub trait Bounded<const D: usize, BV> {
+    fn bv(&self) -> BV;
     fn center(&self) -> [f32; D];
     fn center_at_axis(&self, axis: usize) -> f32;
 }
 
-impl<P> Bounded<3> for (P, [Vec3; 3]) {
-    fn aabb(&self) -> AABB {
-        self.1.aabb()
+impl<P, BV: BoundingVolume<3>> Bounded<3, BV> for (P, [Vec3; 3]) {
+    fn bv(&self) -> BV {
+        self.1.bv()
     }
 
     fn center(&self) -> [f32; 3] {
-        self.1.center()
+        <[Vec3; 3] as Bounded<3, BV>>::center(&self.1)
     }
 
     fn center_at_axis(&self, axis: usize) -> f32 {
-        self.1.center_at_axis(axis)
+        <[Vec3; 3] as Bounded<3, BV>>::center_at_axis(&self.1, axis)
     }
 }
 
-impl Bounded<3> for [Vec3; 3] {
-    fn aabb(&self) -> AABB {
-        let mut aabb = AABB::new();
-        for v in self.iter() {
-            aabb.grow(&v.to_array());
-        }
-        aabb
+impl<P, BV: BoundingVolume<2>> Bounded<2, BV> for (P, [Vec2; 3]) {
+    fn bv(&self) -> BV {
+        self.1.bv()
     }
 
-    fn center(&self) -> [f32; 3] {
+    fn center(&self) -> [f32; 2] {
+        <[Vec2; 3] as Bounded<2, BV>>::center(&self.1)
+    }
+
+    fn center_at_axis(&self, axis: usize) -> f32 {
+        <[Vec2; 3] as Bounded<2, BV>>::center_at_axis(&self.1, axis)
+    }
+}
+
+impl<BV: BoundingVolume<2>> Bounded<2, BV> for [Vec2; 3] {
+    fn bv(&self) -> BV {
+        let mut bv = BV::default();
+        bv.grow(&self[0].to_array());
+        bv.grow(&self[1].to_array());
+        bv.grow(&self[2].to_array());
+        bv
+    }
+
+    fn center(&self) -> [f32; 2] {
         let res = (self[0] + self[1] + self[2]) / 3.;
         res.to_array()
     }
@@ -43,31 +58,17 @@ impl Bounded<3> for [Vec3; 3] {
     }
 }
 
-impl<P> Bounded<2> for (P, [Vec2; 3]) {
-    fn aabb(&self) -> AABB<2> {
-        self.1.aabb()
+impl<BV: BoundingVolume<3>> Bounded<3, BV> for [Vec3; 3] {
+    fn bv(&self) -> BV {
+        let mut bv = BV::default();
+        bv.grow(&self[0].to_array());
+        bv.grow(&self[1].to_array());
+        bv.grow(&self[2].to_array());
+        bv
     }
 
-    fn center(&self) -> [f32; 2] {
-        self.1.center()
-    }
-
-    fn center_at_axis(&self, axis: usize) -> f32 {
-        self.1.center_at_axis(axis)
-    }
-}
-
-impl Bounded<2> for [Vec2; 3] {
-    fn aabb(&self) -> AABB<2> {
-        let mut aabb = AABB::new();
-        for v in self.iter() {
-            aabb.grow(&v.to_array());
-        }
-        aabb
-    }
-
-    fn center(&self) -> [f32; 2] {
-        let res = (self[0] + self[1]) / 3.;
+    fn center(&self) -> [f32; 3] {
+        let res = (self[0] + self[1] + self[2]) / 3.;
         res.to_array()
     }
 
@@ -105,5 +106,11 @@ impl Intersect<[Vec2; 3]> for Vec2 {
 impl Intersect<Vec2> for AABB<2> {
     fn intersect(&self, p: &Vec2) -> bool {
         self.min[0] <= p[0] && p[0] <= self.max[0] && self.min[1] <= p[1] && p[1] <= self.max[1]
+    }
+}
+
+impl<const D:usize> Intersect<AABB<D>> for AABB<D> {
+    fn intersect(&self, p: &Self) -> bool {
+        self.intersect_aabb(p)
     }
 }

@@ -4,8 +4,10 @@ use anyhow::Ok;
 use glam::Vec3;
 
 use crate::{
-    bvh::{BuildBvhOption, BVH},
+    bvh::{build_options::BuildBvhOption, BVH},
     half_edge::HalfEdgeMesh,
+    traits::Bounded,
+    AABB,
 };
 
 #[derive(Clone, Copy)]
@@ -96,7 +98,10 @@ impl IndexMesh {
         Ok(())
     }
 
-    pub fn build_bvh(&self, option: BuildBvhOption) -> BVH<3, &IndexTriangle> {
+    pub fn build_aabb_bvh<'a>(&'a self, option: BuildBvhOption) -> BVH<3, AABB<3>, &IndexTriangle>
+    where
+        (&'a IndexTriangle, [Vec3; 3]): Bounded<3, AABB<3>>,
+    {
         let a = self
             .triangles()
             .map(|t| {
@@ -106,9 +111,63 @@ impl IndexMesh {
                 )
             })
             .collect::<Vec<_>>();
-        let a = BVH::build(option, a);
+        let a = BVH::<3, AABB<3>, _>::build(option, a);
         a.transfrom::<&IndexTriangle>()
     }
+
+    /// ## Example
+    ///
+    ///
+    /// ```
+    /// fn build_bevy_mesh() -> Mesh {
+    ///     let mesh = Box{size: 1.}.to_mesh();
+    ///     let RenderableMesh{positions, normals, indices} = mesh.to_renderable_mesh();
+    ///     let mut bevy_mesh = Mesh::new(PrimitiveTopology::TriangleList);
+    ///     bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+    ///     bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+    ///     bevy_mesh.set_indices(Some(Indices::U32(indices)));
+    ///     bevy_mesh
+    /// }
+    ///
+    /// ```
+    pub fn to_renderable_mesh(&self) -> RenderableMesh {
+        // let map = HashMap::new();
+        // map.insert(0.1, 0.2);
+        let vertices = self.vertices().collect::<Vec<_>>();
+        let mut indices_count = 0;
+        let mut indices = vec![];
+        let mut positions = vec![];
+        let mut normals = vec![];
+        for tri in self.triangles() {
+            let v0 = vertices[tri.0];
+            let v1 = vertices[tri.1];
+            let v2 = vertices[tri.2];
+            let n = (*v1 - *v0).cross(*v2 - *v0).normalize();
+            positions.push(v0.to_array());
+            positions.push(v1.to_array());
+            positions.push(v2.to_array());
+            normals.push(n.to_array());
+            normals.push(n.to_array());
+            normals.push(n.to_array());
+            indices.push(indices_count);
+            indices_count += 1;
+            indices.push(indices_count);
+            indices_count += 1;
+            indices.push(indices_count);
+            indices_count += 1;
+        }
+        RenderableMesh {
+            positions,
+            normals,
+            indices,
+        }
+    }
+}
+
+pub struct RenderableMesh {
+    pub positions: Vec<[f32; 3]>,
+    pub normals: Vec<[f32; 3]>,
+    pub indices: Vec<u32>,
 }
 
 impl<'a> From<(&'a IndexTriangle, [Vec3; 3])> for &'a IndexTriangle {
@@ -171,7 +230,7 @@ mod index_mesh_tests {
     fn test_build_bvh() {
         let mesh = IndexMesh::from_stl(&mut File::open("assets/bunny.stl").unwrap()).unwrap();
         let start = std::time::Instant::now();
-        let _bvh = mesh.build_bvh(Default::default());
+        let _bvh = mesh.build_aabb_bvh(Default::default());
         let end = std::time::Instant::now();
         println!("build bvh: {:?}", end - start);
         // let res = bvh.intersect(g, &mesh);

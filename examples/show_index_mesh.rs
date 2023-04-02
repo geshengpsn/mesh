@@ -10,7 +10,7 @@ use bevy::{
         },
     },
 };
-use mesh::IndexMesh;
+use mesh::{IndexMesh, RenderableMesh};
 
 use smooth_bevy_cameras::{
     controllers::orbit::{OrbitCameraBundle, OrbitCameraController, OrbitCameraPlugin},
@@ -73,11 +73,11 @@ fn setup(
         ..default()
     });
 
-    let bvh = mesh.build_bvh(Default::default());
+    let bvh = mesh.build_aabb_bvh(Default::default());
     let mut vertices: Vec<Vec3> = vec![];
     for (n, _) in bvh.iter_rand(0) {
         if n.depth == 10 {
-            let aabb = n.aabb;
+            let aabb: mesh::AABB<3> = n.bv;
             let a = Vec3::new(aabb.min[0], aabb.min[1], aabb.min[2]);
             let b = Vec3::new(aabb.max[0], aabb.min[1], aabb.min[2]);
             let c = Vec3::new(aabb.max[0], aabb.max[1], aabb.min[2]);
@@ -142,29 +142,11 @@ fn setup(
 
 fn build_mesh_from_index_mesh(mesh: &IndexMesh) -> Mesh {
     let mut res = Mesh::new(PrimitiveTopology::TriangleList);
-    let vertices = mesh.vertices().collect::<Vec<_>>();
-    let mut indices_count = 0;
-    let mut indices = vec![];
-    let mut positions = vec![];
-    let mut normals = vec![];
-    for tri in mesh.triangles() {
-        let v0 = vertices[tri.0];
-        let v1 = vertices[tri.1];
-        let v2 = vertices[tri.2];
-        let n = (*v1 - *v0).cross(*v2 - *v0).normalize();
-        positions.push(v0.to_array());
-        positions.push(v1.to_array());
-        positions.push(v2.to_array());
-        normals.push(n.to_array());
-        normals.push(n.to_array());
-        normals.push(n.to_array());
-        indices.push(indices_count);
-        indices_count += 1;
-        indices.push(indices_count);
-        indices_count += 1;
-        indices.push(indices_count);
-        indices_count += 1;
-    }
+    let RenderableMesh {
+        positions,
+        normals,
+        indices,
+    } = mesh.to_renderable_mesh();
     res.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
     res.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
     res.set_indices(Some(Indices::U32(indices)));

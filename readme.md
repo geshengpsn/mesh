@@ -3,7 +3,7 @@
 ## Mesh Types
 - vertex index mesh
 - half-edge mesh
-- winged-edge mesh (?)
+- winged-edge mesh
 
 double direction convert between each type
 
@@ -15,7 +15,7 @@ all mesh types support bvh tree, which makes fast query possible
 - load from stl
 
 ### operate mesh
-- move and rotate mesh
+- transform mesh
 - boolean operation
 - mesh query (fast ray cast, fast collision detection, fast distance compute)
 
@@ -23,11 +23,38 @@ all mesh types support bvh tree, which makes fast query possible
 
 ### mesh io
 - stl
+- obj
+
+### mesh primitives
+- cone
+- cube
+- cylinder
+- plane
+- sphere
+- torus
 
 ## road map
+
 - [x] vertex indices mesh 
+    - [x] stl io
+    - [ ] obj io
+    - [x] half-edge mesh convertion
+    - [ ] transform
+
 - [x] half-edge mesh 
-- [x] stl io 
+    - [x] vertex indices mesh convertion
+    - [ ] transform
+
 - [ ] bvh tree 
-    
-- [ ] obj io 
+    - [x] tree data structure
+    - [x] aabb bvh
+    - [ ] bounding sphere bvh
+    - [x] bvh tree build
+    - [x] fast intersect test 
+    - [ ] generic bounding volume support
+
+- [ ] boolean operation
+    - [ ] triangle intersect test
+    - [ ] winged-egde data structure
+
+- [ ] friendly api
