@@ -261,9 +261,10 @@ impl<const D: usize> AABB<D> {
         }
     }
 
-    pub(crate) fn intersect_aabb(&self, other: &Self) -> bool {
+    pub(crate) fn intersect_aabb(&self, other: &Self, err: f32) -> bool {
         for i in 0..D {
-            if other.max[i] <= self.min[i] || self.max[i] <= other.min[i] {
+            if (other.max[i] - self.min[i]).abs() < err || (self.max[i] - other.min[i]).abs() < err
+            {
                 return false;
             }
         }
@@ -336,12 +337,12 @@ mod aabb_test {
             min: [1.; 3],
             max: [3.; 3],
         };
-        assert!(!a.intersect_aabb(&empty));
-        assert!(!b.intersect_aabb(&empty));
-        assert!(!c.intersect_aabb(&empty));
-        assert!(a.intersect_aabb(&b));
-        assert!(b.intersect_aabb(&c));
-        assert!(!a.intersect_aabb(&c));
+        assert!(!a.intersect_aabb(&empty, 1e-7));
+        assert!(!b.intersect_aabb(&empty, 1e-7));
+        assert!(!c.intersect_aabb(&empty, 1e-7));
+        assert!(a.intersect_aabb(&b, 1e-7));
+        assert!(b.intersect_aabb(&c, 1e-7));
+        assert!(!a.intersect_aabb(&c, 1e-7));
     }
 
     #[test]

@@ -149,12 +149,16 @@ fn setup(
 fn build_mesh_from_index_mesh(mesh: &IndexMesh) -> Mesh {
     let mut res = Mesh::new(PrimitiveTopology::TriangleList);
     let RenderableMesh {
+        colors,
         positions,
         normals,
         indices,
     } = mesh.to_renderable_mesh();
     res.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
     res.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+    if colors.is_some() {
+        res.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors.unwrap());
+    }
     res.set_indices(Some(Indices::U32(indices)));
     res
 }

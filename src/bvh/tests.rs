@@ -9,18 +9,18 @@ use rand::{distributions::Uniform, prelude::Distribution};
 
 #[test]
 fn test_from_node() {
-    let node = Node::<BVHNodeData<3, AABB<3>, usize>> {
+    let node = Node::<BvhNodeData<3, AABB<3>, usize>> {
         depth: 0,
         parent: 0,
         left: None,
         right: None,
-        data: BVHNodeData::<3, AABB<3>, usize> {
+        data: BvhNodeData::<3, AABB<3>, usize> {
             bv: AABB::new(),
             primitives: Some(vec![0, 1, 2]),
         },
     };
 
-    let bvh_node = BVHNode::from_node(&node);
+    let bvh_node = BvhNode::from_node(&node);
     assert_eq!(bvh_node.parent, 0);
     assert_eq!(bvh_node.depth, 0);
     assert_eq!(bvh_node.left, None);
@@ -98,7 +98,7 @@ fn test_split_triangles_mid() {
         aabb.grow_from_aabb(&g.bv());
     }
 
-    let (v1, v2) = BVH::<3, AABB<3>, _>::split_triangles_mid(aabb, primitives, 0);
+    let (v1, v2) = Bvh::<3, AABB<3>, _>::split_triangles_mid(aabb, primitives, 0);
     assert_eq!(v1.len(), 2);
     assert_eq!(v2.len(), 2);
     assert!(v1.iter().all(|(_, v)| v[0].x < 1.5));
@@ -154,7 +154,7 @@ fn test_split_triangles_mid() {
             aabb.grow_from_aabb(&p.1.bv());
             primitives.push(p);
         }
-        let (v1, v2) = BVH::<3, AABB<3>, _>::split_triangles_mid(aabb, primitives, axis);
+        let (v1, v2) = Bvh::<3, AABB<3>, _>::split_triangles_mid(aabb, primitives, axis);
         assert_eq!(v1.len(), 500);
         assert_eq!(v2.len(), 500);
     }
@@ -191,7 +191,7 @@ fn test_split_triangles_average() {
             aabb.grow_from_aabb(&p.1.bv());
             primitives.push(p);
         }
-        let (v1, v2) = BVH::<3, AABB<3>, _>::split_triangles_average(primitives, axis);
+        let (v1, v2) = Bvh::<3, AABB<3>, _>::split_triangles_average(primitives, axis);
         assert_eq!(v1.len(), 500);
         assert_eq!(v2.len(), 500);
     }
@@ -233,8 +233,8 @@ fn test_build_bvh() {
             ],
         ),
     ];
-    let _bvh = BVH::<2, AABB<2>, _>::build(BuildBvhOption::default(), triangles.clone());
-    let _bvh = BVH::<2, AABB<2>, _>::build(
+    let _bvh = Bvh::<2, AABB<2>, _>::build(BuildBvhOption::default(), triangles.clone());
+    let _bvh = Bvh::<2, AABB<2>, _>::build(
         BuildBvhOption {
             split_method: SplitMethod::Average,
             ..Default::default()
@@ -242,11 +242,11 @@ fn test_build_bvh() {
         triangles.clone(),
     );
 
-    let _bvh = BVH::<2, Bsphere<2>, _>::build(BuildBvhOption::default(), triangles.clone());
+    let _bvh = Bvh::<2, Bsphere<2>, _>::build(BuildBvhOption::default(), triangles.clone());
 }
 
 impl Intersect<AABB<2>> for Vec2 {
-    fn intersect(&self, p: &AABB<2>) -> bool {
+    fn intersect(&self, p: &AABB<2>, err: f32) -> bool {
         for i in 0..2 {
             if self[i] < p.min[i] || self[i] > p.max[i] {
                 return false;
@@ -257,8 +257,8 @@ impl Intersect<AABB<2>> for Vec2 {
 }
 
 impl Intersect<(i32, [Vec2; 3])> for Vec2 {
-    fn intersect(&self, p: &(i32, [Vec2; 3])) -> bool {
-        <Vec2 as Intersect<[Vec2; 3]>>::intersect(self, &p.1)
+    fn intersect(&self, p: &(i32, [Vec2; 3]), err: f32) -> bool {
+        <Vec2 as Intersect<[Vec2; 3]>>::intersect(self, &p.1, err)
     }
 }
 
@@ -299,10 +299,10 @@ fn test_intersect() {
         ),
     ];
 
-    let bvh = BVH::<2, AABB<2>, _>::build(BuildBvhOption::default(), triangles.clone());
-    let res = bvh.intersect(Vec2::new(0.0, 0.0));
+    let bvh = Bvh::<2, AABB<2>, _>::build(BuildBvhOption::default(), triangles.clone());
+    let res = bvh.intersect(Vec2::new(0.0, 0.0), 1e-7);
     assert!(res.is_empty());
-    let res = bvh.intersect(Vec2::new(1.1, 1.1));
+    let res = bvh.intersect(Vec2::new(1.1, 1.1), 1e-7);
     assert_eq!(res[0].0, 1);
 
     // let bvh = bvh.transfrom_by(|(i, _)| i);
@@ -359,7 +359,7 @@ mod test_bvh {
             aabb.grow_from_aabb(&g.bv());
         }
 
-        let (v1, v2) = BVH::<3, AABB<3>, _>::split_triangles_mid(aabb, primitives, 0);
+        let (v1, v2) = Bvh::<3, AABB<3>, _>::split_triangles_mid(aabb, primitives, 0);
         assert_eq!(v1.len(), 2);
         assert_eq!(v2.len(), 2);
         assert!(v1.iter().all(|(_, v)| v[0].x < 1.5));
@@ -415,7 +415,7 @@ mod test_bvh {
                 aabb.grow_from_aabb(&p.1.bv());
                 primitives.push(p);
             }
-            let (v1, v2) = BVH::<3, AABB<3>, _>::split_triangles_mid(aabb, primitives, axis);
+            let (v1, v2) = Bvh::<3, AABB<3>, _>::split_triangles_mid(aabb, primitives, axis);
             assert_eq!(v1.len(), 500);
             assert_eq!(v2.len(), 500);
         }
@@ -452,7 +452,7 @@ mod test_bvh {
                 aabb.grow_from_aabb(&p.1.bv());
                 primitives.push(p);
             }
-            let (v1, v2) = BVH::<3, AABB<3>, _>::split_triangles_average(primitives, axis);
+            let (v1, v2) = Bvh::<3, AABB<3>, _>::split_triangles_average(primitives, axis);
             assert_eq!(v1.len(), 500);
             assert_eq!(v2.len(), 500);
         }
@@ -494,8 +494,8 @@ mod test_bvh {
                 ],
             ),
         ];
-        let _bvh = BVH::<2, AABB<2>, _>::build(BuildBvhOption::default(), triangles.clone());
-        let _bvh = BVH::<2, AABB<2>, _>::build(
+        let _bvh = Bvh::<2, AABB<2>, _>::build(BuildBvhOption::default(), triangles.clone());
+        let _bvh = Bvh::<2, AABB<2>, _>::build(
             BuildBvhOption {
                 split_method: SplitMethod::Average,
                 ..Default::default()
@@ -503,7 +503,7 @@ mod test_bvh {
             triangles.clone(),
         );
 
-        let _bvh = BVH::<2, Bsphere<2>, _>::build(BuildBvhOption::default(), triangles.clone());
+        let _bvh = Bvh::<2, Bsphere<2>, _>::build(BuildBvhOption::default(), triangles.clone());
     }
 
     // impl Intersect<AABB<2>> for Vec2 {
@@ -560,13 +560,13 @@ mod test_bvh {
             ),
         ];
 
-        let bvh = BVH::<2, AABB<2>, _>::build(BuildBvhOption::default(), triangles.clone());
-        let res = bvh.intersect(Vec2::new(0.0, 0.0));
+        let bvh = Bvh::<2, AABB<2>, _>::build(BuildBvhOption::default(), triangles.clone());
+        let res = bvh.intersect(Vec2::new(0.0, 0.0), 1e-7);
         assert!(res.is_empty());
-        let res = bvh.intersect(Vec2::new(1.1, 1.1));
+        let res = bvh.intersect(Vec2::new(1.1, 1.1), 1e-7);
         assert_eq!(res[0].0, 1);
 
-        // let bvh = bvh.transfrom_by(|(i, _)| i);
+        // let Bvh = Bvh.transfrom_by(|(i, _)| i);
         println!("{:?}", bvh);
     }
 }

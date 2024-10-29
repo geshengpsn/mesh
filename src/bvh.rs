@@ -14,7 +14,7 @@ use crate::{
 use self::build_options::{BuildBvhOption, DepthControl, SplitMethod};
 
 #[derive(Debug)]
-pub struct BVHNodeData<const D: usize, BV, P>
+pub struct BvhNodeData<const D: usize, BV, P>
 where
     BV: BoundingVolume<D>,
 {
@@ -22,16 +22,16 @@ where
     primitives: Option<Vec<P>>,
 }
 
-impl<const D: usize, BV: BoundingVolume<D>, P> BVHNodeData<D, BV, P> {
+impl<const D: usize, BV: BoundingVolume<D>, P> BvhNodeData<D, BV, P> {
     fn new_node_data(bv: BV) -> Self {
-        BVHNodeData {
+        BvhNodeData {
             bv,
             primitives: None,
         }
     }
 
     fn new_leaf_data(bv: BV, primitives: Vec<P>) -> Self {
-        BVHNodeData {
+        BvhNodeData {
             bv,
             primitives: Some(primitives),
         }
@@ -46,7 +46,7 @@ impl<const D: usize, BV: BoundingVolume<D>, P> BVHNodeData<D, BV, P> {
     }
 }
 
-pub struct BVHNode<'a, const D: usize, BV: BoundingVolume<D>, P> {
+pub struct BvhNode<'a, const D: usize, BV: BoundingVolume<D>, P> {
     pub parent: usize,
     pub depth: usize,
     pub left: Option<usize>,
@@ -55,7 +55,7 @@ pub struct BVHNode<'a, const D: usize, BV: BoundingVolume<D>, P> {
     pub primitives: Option<&'a [P]>,
 }
 
-impl<'a, const D: usize, BV: BoundingVolume<D>, P> BVHNode<'a, D, BV, P> {
+impl<'a, const D: usize, BV: BoundingVolume<D>, P> BvhNode<'a, D, BV, P> {
     pub fn is_leaf(&self) -> bool {
         self.primitives.is_some()
     }
@@ -64,8 +64,8 @@ impl<'a, const D: usize, BV: BoundingVolume<D>, P> BVHNode<'a, D, BV, P> {
         !self.is_leaf()
     }
 
-    fn from_node(node: &'a Node<BVHNodeData<D, BV, P>>) -> Self {
-        BVHNode {
+    fn from_node(node: &'a Node<BvhNodeData<D, BV, P>>) -> Self {
+        BvhNode {
             parent: node.parent,
             depth: node.depth,
             left: node.left,
@@ -76,83 +76,83 @@ impl<'a, const D: usize, BV: BoundingVolume<D>, P> BVHNode<'a, D, BV, P> {
     }
 }
 
-pub struct BVHIter<'a, const D: usize, BV: BoundingVolume<D>, P, IT: iter_types::IterType> {
-    tree_iter: TreeIterator<'a, BVHNodeData<D, BV, P>, IT>,
+pub struct BvhIter<'a, const D: usize, BV: BoundingVolume<D>, P, IT: iter_types::IterType> {
+    tree_iter: TreeIterator<'a, BvhNodeData<D, BV, P>, IT>,
 }
 
 impl<'a, const D: usize, BV: BoundingVolume<D>, P> Iterator
-    for BVHIter<'a, D, BV, P, iter_types::PushOrder>
+    for BvhIter<'a, D, BV, P, iter_types::PushOrder>
 {
-    type Item = (BVHNode<'a, D, BV, P>, usize);
+    type Item = (BvhNode<'a, D, BV, P>, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
         let (node, index) = self.tree_iter.next()?;
-        Some((BVHNode::from_node(node), index))
+        Some((BvhNode::from_node(node), index))
     }
 }
 
 impl<'a, const D: usize, BV: BoundingVolume<D>, P> Iterator
-    for BVHIter<'a, D, BV, P, iter_types::Bfs>
+    for BvhIter<'a, D, BV, P, iter_types::Bfs>
 {
-    type Item = (BVHNode<'a, D, BV, P>, usize);
+    type Item = (BvhNode<'a, D, BV, P>, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
         let (node, index) = self.tree_iter.next()?;
-        Some((BVHNode::from_node(node), index))
+        Some((BvhNode::from_node(node), index))
     }
 }
 
 impl<'a, const D: usize, BV: BoundingVolume<D>, P> Iterator
-    for BVHIter<'a, D, BV, P, iter_types::Dfs>
+    for BvhIter<'a, D, BV, P, iter_types::Dfs>
 {
-    type Item = (BVHNode<'a, D, BV, P>, usize);
+    type Item = (BvhNode<'a, D, BV, P>, usize);
 
     fn next(&mut self) -> Option<Self::Item> {
         let (node, index) = self.tree_iter.next()?;
-        Some((BVHNode::from_node(node), index))
+        Some((BvhNode::from_node(node), index))
     }
 }
 
 #[derive(Debug)]
-pub struct BVH<const D: usize, BV: BoundingVolume<D>, P> {
-    tree: Tree<BVHNodeData<D, BV, P>>,
+pub struct Bvh<const D: usize, BV: BoundingVolume<D>, P> {
+    tree: Tree<BvhNodeData<D, BV, P>>,
 }
 
-impl<const D: usize, BV: BoundingVolume<D>, P> BVH<D, BV, P> {
+impl<const D: usize, BV: BoundingVolume<D>, P> Bvh<D, BV, P> {
     pub fn max_depth(&self) -> usize {
         self.tree.max_depth
     }
 
-    pub fn get_root<'a>(&'a self) -> BVHNode<'a, D, BV, P> {
+    pub fn get_root<'a>(&'a self) -> BvhNode<'a, D, BV, P> {
         self.get_node(0).unwrap()
     }
 
-    pub fn get_node<'a>(&'a self, index: usize) -> Option<BVHNode<'a, D, BV, P>> {
+    pub fn get_node<'a>(&'a self, index: usize) -> Option<BvhNode<'a, D, BV, P>> {
         let node = self.tree.get_node(index)?;
-        Some(BVHNode::from_node(node))
+        Some(BvhNode::from_node(node))
     }
 
-    pub fn iter_rand<'a>(&'a self, from: usize) -> BVHIter<'a, D, BV, P, iter_types::PushOrder> {
-        BVHIter {
+    pub fn iter_rand<'a>(&'a self, from: usize) -> BvhIter<'a, D, BV, P, iter_types::PushOrder> {
+        BvhIter {
             tree_iter: self.tree.iter::<iter_types::PushOrder>(from),
         }
     }
 
-    pub fn iter_bfs<'a>(&'a self, from: usize) -> BVHIter<'a, D, BV, P, iter_types::Bfs> {
-        BVHIter {
+    pub fn iter_bfs<'a>(&'a self, from: usize) -> BvhIter<'a, D, BV, P, iter_types::Bfs> {
+        BvhIter {
             tree_iter: self.tree.iter::<iter_types::Bfs>(from),
         }
     }
 
-    pub fn iter_dfs<'a>(&'a self, from: usize) -> BVHIter<'a, D, BV, P, iter_types::Dfs> {
-        BVHIter {
+    pub fn iter_dfs<'a>(&'a self, from: usize) -> BvhIter<'a, D, BV, P, iter_types::Dfs> {
+        BvhIter {
             tree_iter: self.tree.iter::<iter_types::Dfs>(from),
         }
     }
 }
 
-impl<const D: usize, BV: BoundingVolume<D>, P> BVH<D, BV, P> {
-    pub(crate) fn transfrom_by<T, F>(self, f: F) -> BVH<D, BV, T>
+impl<const D: usize, BV: BoundingVolume<D>, P> Bvh<D, BV, P> {
+    pub(crate) fn transfrom_by<T, F>(self, f: F) -> Bvh<D, BV, T>
     where
         F: Fn(P) -> T,
     {
@@ -161,9 +161,9 @@ impl<const D: usize, BV: BoundingVolume<D>, P> BVH<D, BV, P> {
             .tree
             .data
             .into_iter()
-            .map(|node| Node::<BVHNodeData<D, BV, T>> {
+            .map(|node| Node::<BvhNodeData<D, BV, T>> {
                 depth: node.depth,
-                data: BVHNodeData::<D, BV, T> {
+                data: BvhNodeData::<D, BV, T> {
                     bv: node.data.bv,
                     primitives: if node.data.primitives.is_some() {
                         Some(
@@ -183,18 +183,18 @@ impl<const D: usize, BV: BoundingVolume<D>, P> BVH<D, BV, P> {
                 right: node.right,
             })
             .collect::<Vec<_>>();
-        BVH {
+        Bvh {
             tree: Tree { data, max_depth },
         }
     }
 
-    pub(crate) fn transfrom<T: From<P>>(self) -> BVH<D, BV, T> {
+    pub(crate) fn transfrom<T: From<P>>(self) -> Bvh<D, BV, T> {
         self.transfrom_by(|p| T::from(p))
     }
 }
 
-impl<const D: usize, BV: BoundingVolume<D>, P> BVH<D, BV, P> {
-    pub(crate) fn build(option: BuildBvhOption, triangles: Vec<P>) -> Self
+impl<const D: usize, BV: BoundingVolume<D>, P> Bvh<D, BV, P> {
+    pub(crate) fn build(option: BuildBvhOption, primitives: Vec<P>) -> Self
     where
         P: Bounded<D, BV>,
     {
@@ -209,15 +209,15 @@ impl<const D: usize, BV: BoundingVolume<D>, P> BVH<D, BV, P> {
         };
         let mut tree = Tree::new_empty();
         let mut queue = VecDeque::new();
-        let helper_aabb = triangles.iter().fold(AABB::new(), |mut aabb, v| {
+        let helper_aabb = primitives.iter().fold(AABB::new(), |mut aabb, v| {
             aabb.grow(&v.center());
             aabb
         });
-        let bv = triangles.iter().fold(BV::default(), |mut bv, v| {
+        let bv = primitives.iter().fold(BV::default(), |mut bv, v| {
             bv.merge(&v.bv());
             bv
         });
-        queue.push_back((helper_aabb, bv, triangles, 0usize, ChildSide::Left, 0usize));
+        queue.push_back((helper_aabb, bv, primitives, 0usize, ChildSide::Left, 0usize));
         loop {
             if queue.is_empty() {
                 break;
@@ -226,11 +226,11 @@ impl<const D: usize, BV: BoundingVolume<D>, P> BVH<D, BV, P> {
                 queue.pop_front().unwrap();
             if should_stop(depth, primitives.len()) {
                 let leaf_data =
-                    BVHNodeData::new_leaf_data(aabb, primitives.into_iter().collect::<Vec<_>>());
+                    BvhNodeData::new_leaf_data(aabb, primitives.into_iter().collect::<Vec<_>>());
                 tree.add_child(parent_index, side, leaf_data).unwrap();
                 continue;
             }
-            let node_data = BVHNodeData::new_node_data(aabb);
+            let node_data = BvhNodeData::new_node_data(aabb);
             let current_index = tree.add_child(parent_index, side, node_data).unwrap();
             let longest_axis = helper_aabb.longest_dimension();
             let (left, right) =
@@ -268,7 +268,7 @@ impl<const D: usize, BV: BoundingVolume<D>, P> BVH<D, BV, P> {
                 current_index,
             ));
         }
-        BVH { tree }
+        Bvh { tree }
     }
 
     fn split_triangles(
@@ -321,7 +321,7 @@ impl<const D: usize, BV: BoundingVolume<D>, P> BVH<D, BV, P> {
     // }
 }
 
-impl<const D: usize, BV: BoundingVolume<D>, P> BVH<D, BV, P> {
+impl<const D: usize, BV: BoundingVolume<D>, P> Bvh<D, BV, P> {
     pub fn intersect_by<F1, F2, I>(&self, intersecter: I, fi: F1, fbv: F2) -> Vec<&P>
     where
         F1: Fn(&I, &P) -> bool,
@@ -329,7 +329,11 @@ impl<const D: usize, BV: BoundingVolume<D>, P> BVH<D, BV, P> {
     {
         let mut queue = VecDeque::new();
         let mut res = Vec::new();
-        queue.push_back(self.tree.get_node(0).unwrap());
+        let node = self.tree.get_node(0).unwrap();
+        if !fbv(&intersecter, &node.data.bv) {
+            return vec![];
+        }
+        queue.push_back(node);
         loop {
             if queue.is_empty() {
                 break;
@@ -365,11 +369,11 @@ impl<const D: usize, BV: BoundingVolume<D>, P> BVH<D, BV, P> {
     }
 
     // return all intersected primitives
-    pub fn intersect<I: Intersect<BV> + Intersect<P>>(&self, intersecter: I) -> Vec<&P> {
+    pub fn intersect<I: Intersect<BV> + Intersect<P>>(&self, intersecter: I, err: f32) -> Vec<&P> {
         self.intersect_by(
             intersecter,
-            |i, p| i.intersect(p),
-            |i, aabb| i.intersect(aabb),
+            |i, p| i.intersect(p, err),
+            |i, bv| i.intersect(bv, err),
         )
     }
 }

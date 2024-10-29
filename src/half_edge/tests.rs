@@ -24,7 +24,7 @@ fn test_halfedge() {
 fn test_face() {
     let normal = Vec3::new(1.0, 0.0, 0.0);
     let e = HalfEdge::new(&Vertex::new(Vec3::new(1.0, 2.0, 3.0)));
-    let face = Face::new(&e, normal);
+    let face = Face::<AABB<3>>::new(&e, normal);
     assert_eq!(face.edge, e.uuid);
 }
 
@@ -122,7 +122,7 @@ mod half_edge_mesh_test {
     #[test]
     fn test_from_index_mesh() {
         let mesh = Box { size: 2. }.to_mesh();
-        let mesh = HalfEdgeMesh::from(&mesh);
+        let mesh = HalfEdgeMesh::<AABB<3>>::from(&mesh);
         // print_mesh_graph(&mesh);
         assert!(mesh.is_mesh_manifold());
         assert_eq!(mesh.vertices.len(), 8);
@@ -157,7 +157,7 @@ mod half_edge_mesh_test {
     #[test]
     fn test_find_half_edges_from_start() {
         let mesh = Box { size: 2. }.to_mesh();
-        let mesh = HalfEdgeMesh::from(&mesh);
+        let mesh = HalfEdgeMesh::<AABB<3>>::from(&mesh);
         let mut count = 0;
         for (_, v1) in mesh.vertices.iter() {
             for (_, v2) in mesh.vertices.iter() {

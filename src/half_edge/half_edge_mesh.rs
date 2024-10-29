@@ -1,33 +1,97 @@
 use std::collections::HashMap;
 
+use glam::{Mat4, Quat, Vec3};
 use uuid::Uuid;
 
-use crate::IndexMesh;
+use crate::{
+    bv::BoundingVolume,
+    bvh::{build_options::BuildBvhOption, Bvh},
+    IndexMesh,
+};
 
 use super::{Face, HalfEdge, HalfEdgeMesh, Vertex};
 
-impl From<&IndexMesh> for HalfEdgeMesh {
+impl<BV> From<&IndexMesh> for HalfEdgeMesh<BV>
+where
+    BV: BoundingVolume<3>,
+{
     fn from(mesh: &IndexMesh) -> Self {
-        HalfEdgeMesh::from_index_mesh(mesh)
+        let mut half_edge_mesh = Self::default();
+        let mut ids = vec![];
+        for v in mesh.vertices.iter() {
+            let vertex = Vertex::new(*v);
+            ids.push(vertex.uuid);
+            half_edge_mesh.insert_vertex(vertex);
+        }
+        let mut outgoing_edges = HashMap::<Uuid, Vec<Uuid>>::new();
+        for t in mesh.triangles.iter() {
+            half_edge_mesh.make_face(&ids[t.0], &ids[t.1], &ids[t.2], &mut outgoing_edges);
+        }
+        half_edge_mesh
     }
 }
 
 impl HalfEdgeMesh {
-    pub(super) fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             vertices: HashMap::new(),
             half_edges: HashMap::new(),
             faces: HashMap::new(),
+            bvh: None,
         }
     }
+}
 
+impl<BV> HalfEdgeMesh<BV>
+where
+    BV: BoundingVolume<3>,
+{
     pub fn is_mesh_manifold(&self) -> bool {
+        self.is_mesh_watertight() && self.is_vertex_manifold() && self.is_edge_manifold()
+    }
+
+    // TODO 
+    /// https://cs184.eecs.berkeley.edu/uploads/lectures/10_mesh-rep/images/slide_018.jpg
+    pub fn is_vertex_manifold(&self) -> bool {
+        todo!()
+    }
+
+    // TODO 
+    pub fn is_edge_manifold(&self) -> bool {
+        todo!()
+    }
+
+    pub fn is_mesh_watertight(&self) -> bool {
         for (_, he) in self.half_edges.iter() {
             if he.pair_half_edge.is_nil() {
                 return false;
             }
         }
         true
+    }
+
+    // TODO: implement
+    pub fn is_mesh_self_intersect(&mut self) -> bool {
+        if self.bvh.is_none() {
+            self.build_bvh();
+        }
+        let bvh = self.bvh.as_ref().unwrap();
+        for (_, face) in self.faces.iter() {
+            let intersects = bvh.intersect_by(
+                face,
+                |f, (face_id, b)| {
+                    if face_id == &f.uuid {
+                        return false;
+                    }
+                    let (v1 , v2, v3) = self.find_vertex_in_face(f);
+                    // v1.geometry
+
+                    todo!()
+                },
+                |a, b| false,
+            );
+        }
+        todo!()
     }
 
     pub(super) fn insert_vertex(&mut self, v: Vertex) {
@@ -38,7 +102,7 @@ impl HalfEdgeMesh {
         self.half_edges.insert(half_dege.uuid, half_dege);
     }
 
-    pub(super) fn insert_face(&mut self, f: Face) {
+    pub(super) fn insert_face(&mut self, f: Face<BV>) {
         self.faces.insert(f.uuid, f);
     }
 
@@ -132,23 +196,10 @@ impl HalfEdgeMesh {
         self.insert_face(face);
     }
 
-    fn from_index_mesh(mesh: &IndexMesh) -> Self {
-        let mut half_edge_mesh = Self::new();
-        let mut ids = vec![];
-        for v in mesh.vertices.iter() {
-            let vertex = Vertex::new(*v);
-            ids.push(vertex.uuid);
-            half_edge_mesh.insert_vertex(vertex);
-        }
-        let mut outgoing_edges = HashMap::<Uuid, Vec<Uuid>>::new();
-        for t in mesh.triangles.iter() {
-            half_edge_mesh.make_face(&ids[t.0], &ids[t.1], &ids[t.2], &mut outgoing_edges);
-        }
-        half_edge_mesh
+    fn to_index_mesh(&self) -> IndexMesh {
+        IndexMesh::from(self)
     }
-}
 
-impl HalfEdgeMesh {
     // use this function only when mesh is under construction
     // mesh is non manifold
     fn find_half_edge_by_outgoing_map(
@@ -222,7 +273,7 @@ impl HalfEdgeMesh {
         res
     }
 
-    pub fn find_vertex_in_face(&self, face: &Face) -> (&Vertex, &Vertex, &Vertex) {
+    pub fn find_vertex_in_face(&self, face: &Face<BV>) -> (&Vertex, &Vertex, &Vertex) {
         let e1 = self.half_edges.get(&face.edge).unwrap();
         let e2 = self.half_edges.get(&e1.next_half_edge).unwrap();
         let e3 = self.half_edges.get(&e2.next_half_edge).unwrap();
@@ -231,5 +282,43 @@ impl HalfEdgeMesh {
             self.vertices.get(&e2.next_vertex).unwrap(),
             self.vertices.get(&e3.next_vertex).unwrap(),
         )
+    }
+
+    pub fn transfrom(&mut self, mat4: Mat4) {
+        self.vertices.iter_mut().for_each(|(_, v)| {
+            v.geometry = mat4.transform_point3(v.geometry.clone());
+        });
+    }
+
+    pub fn translate(&mut self, translation: Vec3) {
+        let mat = Mat4::from_translation(translation);
+        self.transfrom(mat);
+    }
+
+    pub fn scale(&mut self, scale: Vec3) {
+        let mat = Mat4::from_scale(scale);
+        self.transfrom(mat);
+    }
+
+    pub fn rotate(&mut self, rotation: Quat) {
+        let mat = Mat4::from_quat(rotation);
+        self.transfrom(mat);
+    }
+
+    pub(crate) fn build_bvh(&mut self) {
+        let p = self
+            .faces
+            .iter()
+            .map(|(_, face)| {
+                let (v1, v2, v3) = self.find_vertex_in_face(face);
+                (face.uuid, [v1.geometry, v2.geometry, v3.geometry])
+            })
+            .collect::<Vec<_>>();
+        Bvh::<3, BV, _>::build(BuildBvhOption::default(), p);
+    }
+
+    // TODO find intersect triangles
+    fn find_intersect(&self, other: &Self) -> Vec<(Uuid, Uuid)> {
+        todo!()
     }
 }

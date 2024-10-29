@@ -34,32 +34,44 @@ all mesh types support bvh tree, which makes fast query possible
 - torus
 
 
-## features road map
-- [x] vertex indices mesh 
+## features
+- [x] vertex indices mesh
     - [x] stl io
-    - [ ] obj io
+    - [x] obj io
     - [x] half-edge mesh convertion
-    - [ ] transform
+    - [x] transform
 
-- [x] half-edge mesh 
+- [x] half-edge mesh
     - [x] vertex indices mesh convertion
-    - [ ] transform
+    - [x] transform
 
-- [ ] bvh tree 
+- [x] bvh tree
     - [x] tree data structure
     - [x] aabb bvh
-    - [ ] bounding sphere bvh
+    - [x] bounding sphere bvh
     - [x] bvh tree build
     - [x] fast intersect test 
-    - [ ] generic bounding volume support
+    - [x] generic bounding volume support
 
-- [ ] boolean operation
-    - [ ] triangle intersect test
-    - [ ] winged-egde data structure
-
-
-
-## develop todos
+- [ ] csg
+    - [ ] csg tree
+    - [ ] boolean operation
+        - [ ] triangle intersect test
+        - [ ] winged-egde data structure
+<!-- ## develop todos
 - [ ] unify all mesh types to one
     ??? user don't care what types of mesh are, dont let user read docs
 
+- [ ] async data structure and algorothms?
+
+## Phases 
+
+目标基本实现
+
+算法优化，async，多核，gpu并行优化
+
+抽象结构优化，api设计
+
+examples，docs
+
+promotion: open source, publish -->

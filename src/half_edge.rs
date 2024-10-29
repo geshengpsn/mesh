@@ -2,7 +2,7 @@ use glam::Vec3;
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use crate::bv::AABB;
+use crate::{bv::BoundingVolume, bvh::Bvh, AABB};
 
 mod half_edge_mesh;
 #[cfg(test)]
@@ -48,25 +48,39 @@ impl HalfEdge {
 }
 
 #[derive(Debug)]
-pub struct Face {
+pub struct Face<BV> 
+where
+    BV: BoundingVolume<3>,
+{
     edge: Uuid,
     normal: Vec3,
+    bv: BV,
     uuid: Uuid,
 }
 
-impl Face {
+impl<BV> Face<BV>
+where
+    BV: BoundingVolume<3>,
+{
     fn new(edge: &HalfEdge, normal: Vec3) -> Self {
         Face {
             edge: edge.uuid,
             normal,
+            bv: BV::default(),
             uuid: Uuid::new_v4(),
         }
     }
 }
 
-#[derive(Debug)]
-pub struct HalfEdgeMesh {
+#[derive(Debug, Default)]
+pub struct HalfEdgeMesh<BV = AABB<3>>
+where
+    BV: BoundingVolume<3>,
+{
     pub vertices: HashMap<Uuid, Vertex>,
     pub half_edges: HashMap<Uuid, HalfEdge>,
-    pub faces: HashMap<Uuid, Face>,
+    pub faces: HashMap<Uuid, Face<BV>>,
+    // (face uuid, [v0, v1, v2])
+    // TODO: use a named data structure
+    pub bvh: Option<Bvh<3, BV, (Uuid, [Vec3; 3])>>,
 }

@@ -1,10 +1,11 @@
 use std::{collections::HashMap, fmt::Debug, slice::Iter};
 
 use anyhow::Ok;
-use glam::Vec3;
+use glam::{Mat4, Quat, Vec3};
 
 use crate::{
-    bvh::{build_options::BuildBvhOption, BVH},
+    bv::BoundingVolume,
+    bvh::{build_options::BuildBvhOption, Bvh},
     half_edge::HalfEdgeMesh,
     traits::Bounded,
     AABB,
@@ -29,8 +30,11 @@ pub struct IndexMesh {
     pub(crate) triangles: Vec<IndexTriangle>,
 }
 
-impl From<&HalfEdgeMesh> for IndexMesh {
-    fn from(value: &HalfEdgeMesh) -> Self {
+impl<BV> From<&HalfEdgeMesh<BV>> for IndexMesh
+where
+    BV: BoundingVolume<3>,
+{
+    fn from(value: &HalfEdgeMesh<BV>) -> Self {
         let mut mesh = IndexMesh::new();
         let mut vertex_map = HashMap::new();
         for (index, (uuid, v)) in value.vertices.iter().enumerate() {
@@ -138,7 +142,7 @@ impl IndexMesh {
         Ok(())
     }
 
-    pub fn build_aabb_bvh<'a>(&'a self, option: BuildBvhOption) -> BVH<3, AABB<3>, &IndexTriangle>
+    pub fn build_aabb_bvh<'a>(&'a self, option: BuildBvhOption) -> Bvh<3, AABB<3>, &IndexTriangle>
     where
         (&'a IndexTriangle, [Vec3; 3]): Bounded<3, AABB<3>>,
     {
@@ -151,7 +155,7 @@ impl IndexMesh {
                 )
             })
             .collect::<Vec<_>>();
-        let a = BVH::<3, AABB<3>, _>::build(option, a);
+        let a = Bvh::<3, AABB<3>, _>::build(option, a);
         a.transfrom::<&IndexTriangle>()
     }
 
@@ -200,13 +204,40 @@ impl IndexMesh {
             positions,
             normals,
             indices,
+            colors: None,
         }
+    }
+
+    pub fn to_halfedge_mesh(&self) -> HalfEdgeMesh {
+        HalfEdgeMesh::from(self)
+    }
+
+    pub fn transfrom(&mut self, mat4: Mat4) {
+        self.vertices.iter_mut().for_each(|v| {
+            *v = mat4.transform_vector3(v.clone());
+        });
+    }
+
+    pub fn translate(&mut self, translation: Vec3) {
+        let mat = Mat4::from_translation(translation);
+        self.transfrom(mat);
+    }
+
+    pub fn scale(&mut self, scale: Vec3) {
+        let mat = Mat4::from_scale(scale);
+        self.transfrom(mat);
+    }
+
+    pub fn rotate(&mut self, rotation: Quat) {
+        let mat = Mat4::from_quat(rotation);
+        self.transfrom(mat);
     }
 }
 
 pub struct RenderableMesh {
     pub positions: Vec<[f32; 3]>,
     pub normals: Vec<[f32; 3]>,
+    pub colors: Option<Vec<[f32; 3]>>,
     pub indices: Vec<u32>,
 }
 

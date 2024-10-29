@@ -107,6 +107,10 @@ impl<T> Tree<T> {
         self.data.get(index)
     }
 
+    pub(crate) fn get_node_mut(&mut self, index: usize) -> Option<&mut Node<T>> {
+        self.data.get_mut(index)
+    }
+
     pub(crate) fn len(&self) -> usize {
         self.data.len()
     }
@@ -138,6 +142,35 @@ impl<T> Tree<T> {
 
                 Ok(index)
             }
+        }
+    }
+
+    // TODO test need
+    pub(crate) fn merge(self, other: Self, root: T) -> Self {
+        let mut vec = Vec::with_capacity(1 + self.len() + other.len());
+        vec.push(Node::new(root, 1, 0));
+        let max_depth = self.max_depth.max(other.max_depth) + 1;
+        let bias = self.len() + 1;
+        vec.extend(self.data.into_iter().map(|node| Node {
+            data: node.data,
+            depth: node.depth + 1,
+            parent: node.parent + 1,
+            left: node.left.map(|x| x + 1),
+            right: node.right.map(|x| x + 1),
+        }));
+        vec.extend(other.data.into_iter().map(|node| Node {
+            data: node.data,
+            depth: node.depth + 1,
+            parent: node.parent + bias,
+            left: node.left.map(|x| x + bias),
+            right: node.right.map(|x| x + bias),
+        }));
+        vec[1].parent = 0;
+        vec[bias].parent = 0;
+
+        Tree {
+            data: vec,
+            max_depth,
         }
     }
 

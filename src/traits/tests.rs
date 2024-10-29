@@ -20,15 +20,15 @@ fn test_bounded() {
 fn test_intersect_vec2_with_aabb() {
     let point = Vec2::new(0.1, 0.1);
     let triangle = [Vec2::X, Vec2::Y, Vec2::ZERO];
-    assert!(point.intersect(&triangle));
+    assert!(point.intersect(&triangle, 1e-7));
 
     let point = Vec2::new(0.1, 0.1);
     let triangle = [Vec2::X, Vec2::Y, Vec2::X];
-    assert!(!point.intersect(&triangle));
+    assert!(!point.intersect(&triangle, 1e-7));
 
     let point = Vec2::new(1., 1.);
     let triangle = [Vec2::X, Vec2::Y, Vec2::ZERO];
-    assert!(!point.intersect(&triangle));
+    assert!(!point.intersect(&triangle, 1e-7));
 
     let aabb = AABB::<2> {
         min: [0., 0.],
@@ -39,7 +39,7 @@ fn test_intersect_vec2_with_aabb() {
         min: [0., 0.],
         max: [2., 2.],
     };
-    assert!(aabb.intersect(&Vec2::new(1., 1.)));
-    assert!(!aabb.intersect(&Vec2::new(1.1, 1.)));
-    assert!(aabb.intersect(&aabb2));
+    assert!(aabb.intersect(&Vec2::new(1., 1.), 1e-7));
+    assert!(!aabb.intersect(&Vec2::new(1.1, 1.), 1e-7));
+    assert!(aabb.intersect(&aabb2, 1e-7));
 }

@@ -78,11 +78,11 @@ impl<BV: BoundingVolume<3>> Bounded<3, BV> for [Vec3; 3] {
 }
 
 pub trait Intersect<I> {
-    fn intersect(&self, p: &I) -> bool;
+    fn intersect(&self, p: &I, err: f32) -> bool;
 }
 
 impl Intersect<[Vec2; 3]> for Vec2 {
-    fn intersect(&self, p: &[Vec2; 3]) -> bool {
+    fn intersect(&self, p: &[Vec2; 3], err: f32) -> bool {
         let triangle = p;
         let v0 = triangle[0];
         let v1 = triangle[1];
@@ -104,13 +104,13 @@ impl Intersect<[Vec2; 3]> for Vec2 {
 }
 
 impl Intersect<Vec2> for AABB<2> {
-    fn intersect(&self, p: &Vec2) -> bool {
+    fn intersect(&self, p: &Vec2, err: f32) -> bool {
         self.min[0] <= p[0] && p[0] <= self.max[0] && self.min[1] <= p[1] && p[1] <= self.max[1]
     }
 }
 
-impl<const D:usize> Intersect<AABB<D>> for AABB<D> {
-    fn intersect(&self, p: &Self) -> bool {
-        self.intersect_aabb(p)
+impl<const D: usize> Intersect<AABB<D>> for AABB<D> {
+    fn intersect(&self, p: &Self, err: f32) -> bool {
+        self.intersect_aabb(p, err)
     }
 }
